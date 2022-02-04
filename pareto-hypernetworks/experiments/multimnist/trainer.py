@@ -21,9 +21,7 @@ import sparseGroupLasso
 def evaluate(hypernet, targetnet, loader, rays, device):
     hypernet.eval()
     loss1 = nn.CrossEntropyLoss()
-    loss2 = sparseGroupLasso.sparse_group_lasso(targetnet)
-    print(loss2)
-    results = defaultdict(list)
+    loss2 = nn.CrossEntropyLoss()
 
     for ray in rays:
         total = 0.
@@ -86,9 +84,20 @@ def train(
     # ----
     # Nets
     # ----
+    print(hidden_dim)
     if model == 'lenet':
         hnet: nn.Module = LeNetHyper([9, 5], ray_hidden_dim=hidden_dim)
         net: nn.Module = LeNetTarget([9, 5])
+        print(hnet)
+        print("----------------------------------------------------------")
+        print("n_kernels", net.n_kernels) 
+        print("kernel_size", net.kernel_size) 
+        print("out_dim", net.out_dim) 
+        print("n_conv_layers", net.n_conv_layers) 
+        print("n_tasks", net.n_tasks) 
+        print("target_hidden_dim", net.target_hidden_dim)
+        print(net)
+        print(net.__dict__) 
     else:
         hn_config = {
             '11M': {'num_chunks': 105, 'num_ws': 11},
@@ -104,12 +113,11 @@ def train(
 
     hnet = hnet.to(device)
     net = net.to(device)
-
     # ---------
     # Task loss
     # ---------
     loss1 = nn.CrossEntropyLoss()
-    loss2 = sparseGroupLasso.sparse_group_lasso(net)
+    loss2 = nn.CrossEntropyLoss()
 
     optimizer = torch.optim.Adam(hnet.parameters(), lr=lr, weight_decay=wd)
 
@@ -183,6 +191,9 @@ def train(
                 ray = torch.tensor([alpha.item(), 1 - alpha.item()]).to(device)
 
             weights = hnet(ray)
+            for clef in weights.keys():
+                print(clef)
+            print(net(img, weights))
             logit1, logit2 = net(img, weights)
 
             l1 = loss1(logit1, ys[:, 0])

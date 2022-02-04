@@ -29,7 +29,8 @@ class LeNetHyper(nn.Module):
             nn.Linear(ray_hidden_dim, ray_hidden_dim)
         )
 
-        self.conv_0_weights = nn.Linear(ray_hidden_dim, n_kernels * kernel_size[0] * kernel_size[0])
+        self.conv_0_weights = nn.Linear(
+            ray_hidden_dim, n_kernels * kernel_size[0] * kernel_size[0])
         self.conv_0_bias = nn.Linear(ray_hidden_dim, n_kernels)
 
         for i in range(1, n_conv_layers):
@@ -38,15 +39,18 @@ class LeNetHyper(nn.Module):
             # current number of kernels
             c = 2 ** i * n_kernels
 
-            setattr(self, f"conv_{i}_weights", nn.Linear(ray_hidden_dim, c * p * kernel_size[i] * kernel_size[i]))
+            setattr(self, f"conv_{i}_weights", nn.Linear(
+                ray_hidden_dim, c * p * kernel_size[i] * kernel_size[i]))
             setattr(self, f"conv_{i}_bias", nn.Linear(ray_hidden_dim,  c))
 
         latent = 25
-        self.hidden_0_weights = nn.Linear(ray_hidden_dim, target_hidden_dim * 2 ** i * n_kernels * latent)
+        self.hidden_0_weights = nn.Linear(
+            ray_hidden_dim, target_hidden_dim * 2 ** i * n_kernels * latent)
         self.hidden_0_bias = nn.Linear(ray_hidden_dim, target_hidden_dim)
 
         for j in range(n_tasks):
-            setattr(self, f"task_{j}_weights", nn.Linear(ray_hidden_dim, target_hidden_dim * out_dim))
+            setattr(self, f"task_{j}_weights", nn.Linear(
+                ray_hidden_dim, target_hidden_dim * out_dim))
             setattr(self, f"task_{j}_bias", nn.Linear(ray_hidden_dim, out_dim))
 
     def shared_parameters(self):
@@ -67,8 +71,10 @@ class LeNetHyper(nn.Module):
                 n_layers = self.n_tasks
 
             for j in range(n_layers):
-                out_dict[f"{i}{j}.weights"] = getattr(self, f"{i}_{j}_weights")(features)
-                out_dict[f"{i}{j}.bias"] = getattr(self, f"{i}_{j}_bias")(features).flatten()
+                out_dict[f"{i}{j}.weights"] = getattr(
+                    self, f"{i}_{j}_weights")(features)
+                out_dict[f"{i}{j}.bias"] = getattr(
+                    self, f"{i}_{j}_bias")(features).flatten()
 
         return out_dict
 
@@ -77,6 +83,7 @@ class LeNetTarget(nn.Module):
     """LeNet target network
 
     """
+
     def __init__(self, kernel_size, n_kernels=10, out_dim=10, target_hidden_dim=50, n_conv_layers=2, n_tasks=2):
         super().__init__()
         assert len(kernel_size) == n_conv_layers, "kernel_size is list with same dim as number of " \
@@ -89,6 +96,7 @@ class LeNetTarget(nn.Module):
         self.target_hidden_dim = target_hidden_dim
 
     def forward(self, x, weights=None):
+        print("ok")
         x = F.conv2d(
             x, weight=weights['conv0.weights'].reshape(self.n_kernels, 1, self.kernel_size[0],
                                                        self.kernel_size[0]),
@@ -100,7 +108,8 @@ class LeNetTarget(nn.Module):
             x = F.conv2d(
                 x,
                 weight=weights[f'conv{i}.weights'].reshape(int(2 ** i * self.n_kernels),
-                                                           int(2 ** (i-1) * self.n_kernels),
+                                                           int(2 ** (i-1) *
+                                                               self.n_kernels),
                                                            self.kernel_size[i],
                                                            self.kernel_size[i]),
                 bias=weights[f'conv{i}.bias'], stride=1
@@ -112,7 +121,8 @@ class LeNetTarget(nn.Module):
 
         x = F.linear(
             x,
-            weight=weights["hidden0.weights"].reshape(self.target_hidden_dim, x.shape[-1]),
+            weight=weights["hidden0.weights"].reshape(
+                self.target_hidden_dim, x.shape[-1]),
             bias=weights["hidden0.bias"]
         )
 
@@ -120,7 +130,8 @@ class LeNetTarget(nn.Module):
         for j in range(self.n_tasks):
             logits.append(
                 F.linear(
-                    x, weight=weights[f'task{j}.weights'].reshape(self.out_dim, self.target_hidden_dim),
+                    x, weight=weights[f'task{j}.weights'].reshape(
+                        self.out_dim, self.target_hidden_dim),
                     bias=weights[f'task{j}.bias']
                 )
             )
@@ -146,13 +157,15 @@ class ResnetHyper(nn.Module):
         super().__init__()
         self.preference_embedding_dim = preference_embedding_dim
         self.num_chunks = num_chunks
-        self.chunk_embedding_matrix = nn.Embedding(num_embeddings=num_chunks, embedding_dim=chunk_embedding_dim)
+        self.chunk_embedding_matrix = nn.Embedding(
+            num_embeddings=num_chunks, embedding_dim=chunk_embedding_dim)
         self.preference_embedding_matrix = nn.Embedding(
             num_embeddings=preference_dim, embedding_dim=preference_embedding_dim
         )
 
         self.fc = nn.Sequential(
-            nn.Linear(preference_embedding_dim + chunk_embedding_dim, hidden_dim),
+            nn.Linear(preference_embedding_dim +
+                      chunk_embedding_dim, hidden_dim),
             nn.ReLU(inplace=True),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(inplace=True),
@@ -162,13 +175,16 @@ class ResnetHyper(nn.Module):
         self.ws = nn.ParameterList(list_ws)
 
         # initialization
-        torch.nn.init.normal_(self.preference_embedding_matrix.weight, mean=0., std=0.1)
-        torch.nn.init.normal_(self.chunk_embedding_matrix.weight, mean=0., std=0.1)
+        torch.nn.init.normal_(
+            self.preference_embedding_matrix.weight, mean=0., std=0.1)
+        torch.nn.init.normal_(
+            self.chunk_embedding_matrix.weight, mean=0., std=0.1)
         for w in self.ws:
             torch.nn.init.normal_(w, mean=0., std=0.1)
 
         self.layer_to_shape = {
-            'resnet.conv1.weight': torch.Size([64, 1, 7, 7]),  # torch.Size([64, 3, 7, 7]),
+            # torch.Size([64, 3, 7, 7]),
+            'resnet.conv1.weight': torch.Size([64, 1, 7, 7]),
             'resnet.bn1.weight': torch.Size([64]),
             'resnet.bn1.bias': torch.Size([64]),
             'resnet.layer1.0.conv1.weight': torch.Size([64, 64, 3, 3]),
@@ -241,7 +257,8 @@ class ResnetHyper(nn.Module):
 
     def forward(self, preference):
         # preference embedding
-        pref_embedding = torch.zeros((self.preference_embedding_dim, ), device=preference.device)
+        pref_embedding = torch.zeros(
+            (self.preference_embedding_dim, ), device=preference.device)
         for i, pref in enumerate(preference):
             pref_embedding += self.preference_embedding_matrix(
                 torch.tensor([i], device=preference.device)
@@ -249,20 +266,24 @@ class ResnetHyper(nn.Module):
         # chunk embedding
         weights = []
         for chunk_id in range(self.num_chunks):
-            chunk_embedding = self.chunk_embedding_matrix(torch.tensor([chunk_id], device=preference.device)).squeeze(0)
+            chunk_embedding = self.chunk_embedding_matrix(
+                torch.tensor([chunk_id], device=preference.device)).squeeze(0)
             # input to fc
-            input_embedding = torch.cat((pref_embedding, chunk_embedding)).unsqueeze(0)
+            input_embedding = torch.cat(
+                (pref_embedding, chunk_embedding)).unsqueeze(0)
             # hidden representation
             rep = self.fc(input_embedding)
 
-            weights.append(torch.cat([F.linear(rep, weight=w) for w in self.ws], dim=1))
+            weights.append(
+                torch.cat([F.linear(rep, weight=w) for w in self.ws], dim=1))
 
         weight_vector = torch.cat(weights, dim=1).squeeze(0)
 
         out_dict = dict()
         position = 0
         for name, shapes in self.layer_to_shape.items():
-            out_dict[name] = weight_vector[position:position+shapes.numel()].reshape(shapes)
+            out_dict[name] = weight_vector[position:position +
+                                           shapes.numel()].reshape(shapes)
             position += shapes.numel()
         return out_dict
 
@@ -270,7 +291,8 @@ class ResnetHyper(nn.Module):
 class ResNetTarget(nn.Module):
     def __init__(self, pretrained=False, progress=True, **kwargs):
         super().__init__()
-        self.resnet = models.resnet18(pretrained=pretrained, progress=progress, num_classes=512, **kwargs)
+        self.resnet = models.resnet18(
+            pretrained=pretrained, progress=progress, num_classes=512, **kwargs)
 
         self.resnet.conv1.weight.data = torch.randn((64, 1, 7, 7))
 
@@ -331,7 +353,8 @@ class ResNetTarget(nn.Module):
         identity = x
 
         # conv
-        out = F.conv2d(x, weights[f'resnet.layer{layer}.{index}.conv1.weight'], stride=stride, padding=1)
+        out = F.conv2d(
+            x, weights[f'resnet.layer{layer}.{index}.conv1.weight'], stride=stride, padding=1)
         # bn
         out = F.batch_norm(
             out,
@@ -343,7 +366,8 @@ class ResNetTarget(nn.Module):
         )
         out = F.relu(out, inplace=True)
         # conv
-        out = F.conv2d(out, weights[f'resnet.layer{layer}.{index}.conv2.weight'], stride=1, padding=1)
+        out = F.conv2d(
+            out, weights[f'resnet.layer{layer}.{index}.conv2.weight'], stride=1, padding=1)
         # bn
         out = F.batch_norm(
             out,
@@ -367,7 +391,8 @@ class ResNetTarget(nn.Module):
     def forward_dowmsample(x, weights, layer):
         device = x.device
 
-        out = F.conv2d(x, weights[f'resnet.layer{layer}.0.downsample.0.weight'], stride=2)
+        out = F.conv2d(
+            x, weights[f'resnet.layer{layer}.0.downsample.0.weight'], stride=2)
 
         out = F.batch_norm(
             out,
