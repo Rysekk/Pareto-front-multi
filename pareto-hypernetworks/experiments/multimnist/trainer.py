@@ -90,14 +90,14 @@ def train(
         net: nn.Module = LeNetTarget([9, 5])
         print(hnet)
         print("----------------------------------------------------------")
-        print("n_kernels", net.n_kernels) 
-        print("kernel_size", net.kernel_size) 
-        print("out_dim", net.out_dim) 
-        print("n_conv_layers", net.n_conv_layers) 
-        print("n_tasks", net.n_tasks) 
+        print("n_kernels", net.n_kernels)
+        print("kernel_size", net.kernel_size)
+        print("out_dim", net.out_dim)
+        print("n_conv_layers", net.n_conv_layers)
+        print("n_tasks", net.n_tasks)
         print("target_hidden_dim", net.target_hidden_dim)
         print(net)
-        print(net.__dict__) 
+        print(net.__dict__)
     else:
         hn_config = {
             '11M': {'num_chunks': 105, 'num_ws': 11},
@@ -125,11 +125,15 @@ def train(
     # solver
     # ------
     solvers = dict(ls=LinearScalarizationSolver, epo=EPOSolver)
-
+    print("solver : ", solvers)
+    print("solver_type : ", solver_type)
     solver_method = solvers[solver_type]
+    print("solver_method : ", solver_method)
     if solver_type == 'epo':
+        print("okookkkokokokokok")
         solver = solver_method(n_tasks=2, n_params=count_parameters(hnet))
     else:
+        print("ok")
         # ls
         solver = solver_method(n_tasks=2)
 
@@ -180,7 +184,7 @@ def train(
             img, ys = batch
             img = img.to(device)
             ys = ys.to(device)
-
+            print("alpha : ", alpha)
             if alpha > 0:
                 ray = torch.from_numpy(
                     np.random.dirichlet((alpha, alpha), 1).astype(
@@ -191,14 +195,18 @@ def train(
                 ray = torch.tensor([alpha.item(), 1 - alpha.item()]).to(device)
 
             weights = hnet(ray)
-            for clef in weights.keys():
-                print(clef)
             print(net(img, weights))
             logit1, logit2 = net(img, weights)
 
             l1 = loss1(logit1, ys[:, 0])
-            l2 = loss2(logit2, ys[:, 1])
-            losses = torch.stack((l1, l2))
+            l2 = sparseGroupLasso.sparse_group_lasso(weights)
+
+            print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+            print("l2:",torch.tensor(l2.numpy()))
+            l2_torch = torch.tensor(l2.numpy())
+            losses = torch.stack((l1, l2_torch))
+            print("losses:",losses)
+            print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA 2")
 
             ray = ray.squeeze(0)
             loss = solver(losses, ray, list(hnet.parameters()))
