@@ -67,9 +67,11 @@ class EPO:
         return torch.cat(tuple(g.reshape(-1, ) for i, g in enumerate(grad)), axis=0)
 
     def get_weighted_loss(self, losses, ray, parameters):
-        lp = ExactParetoLP(m=self.n_tasks, n=self.n_params, r=ray.cpu().numpy())
+        lp = ExactParetoLP(m=self.n_tasks, n=self.n_params,
+                           r=ray.cpu().numpy())
 
         grads = []
+
         for i, loss in enumerate(losses):
             g = torch.autograd.grad(loss, parameters, retain_graph=True)
             flat_grad = self._flattening(g)
@@ -78,6 +80,8 @@ class EPO:
         G = torch.stack(grads)
         GG_T = G @ G.T
         GG_T = GG_T.detach().cpu().numpy()
+
+
 
         numpy_losses = losses.detach().cpu().numpy()
 

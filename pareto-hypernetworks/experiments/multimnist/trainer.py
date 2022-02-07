@@ -117,7 +117,6 @@ def train(
     # Task loss
     # ---------
     loss1 = nn.CrossEntropyLoss()
-    loss2 = nn.CrossEntropyLoss()
 
     optimizer = torch.optim.Adam(hnet.parameters(), lr=lr, weight_decay=wd)
 
@@ -202,10 +201,10 @@ def train(
             l2 = sparseGroupLasso.sparse_group_lasso(weights)
 
             print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-            print("l2:",torch.tensor(l2.numpy()))
-            l2_torch = torch.tensor(l2.numpy())
+            l2_torch = torch.tensor(l2.numpy(), requires_grad=True)
+            print("l2:", l2_torch)
             losses = torch.stack((l1, l2_torch))
-            print("losses:",losses)
+            print("losses:", losses)
             print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA 2")
 
             ray = ray.squeeze(0)
